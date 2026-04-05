@@ -14,6 +14,16 @@ export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
 
+  React.useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const message = params.get("message")
+    if (message === "check-email") {
+      toast.success("Vui lòng kiểm tra email để kích hoạt tài khoản!", { duration: 5000 })
+    } else if (message === "auth-error") {
+      toast.error("Có lỗi xảy ra khi xác thực email. Link có thể đã hết hạn.", { duration: 5000 })
+    }
+  }, [])
+
   const handleLogin = async (e) => {
     e.preventDefault()
     if (!email || !password) return toast.error("Vui lòng điền đủ thông tin")

@@ -32,7 +32,7 @@ export function ScheduledWidget() {
     amount: '',
     category_id: '',
     frequency: 'daily',
-    scheduled_time: '07:00',
+    scheduled_time: '07:00 AM',
     start_date: new Date().toISOString().split('T')[0],
     end_date: '',
     day_of_week: [1], // Mặc định Thứ 2
@@ -147,6 +147,51 @@ export function ScheduledWidget() {
     }
   }
 
+  const handleTimeBlur = (e) => {
+    let val = e.target.value.trim().toLowerCase()
+    if (!val) {
+      setFormData({...formData, scheduled_time: '07:00 AM'})
+      return
+    }
+    
+    let hours = 0, minutes = 0
+    const isPM = val.includes('p')
+    const isAM = val.includes('a')
+    const nums = val.replace(/[^0-9]/g, '')
+    
+    if (nums.length > 0) {
+      if (nums.length <= 2) {
+        hours = parseInt(nums, 10)
+      } else if (nums.length === 3) {
+        hours = parseInt(nums.substring(0, 1), 10)
+        minutes = parseInt(nums.substring(1), 10)
+      } else {
+        hours = parseInt(nums.substring(0, 2), 10)
+        minutes = parseInt(nums.substring(2, 4), 10)
+      }
+      
+      // Cap at reasonable limits before transforming 12h
+      if (hours > 23) hours = 23
+      if (minutes > 59) minutes = 59
+      
+      // Calculate 24h
+      let h24 = hours
+      if (isPM && hours < 12) h24 += 12
+      else if (isAM && hours === 12) h24 = 0
+      else if (!isPM && !isAM && hours > 12) h24 = hours // they typed 14:00
+      
+      // Convert to 12h formatting for UI
+      let ampm = h24 >= 12 ? 'PM' : 'AM'
+      let h12 = h24 % 12
+      if (h12 === 0) h12 = 12
+      
+      const formatted = `${h12.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${ampm}`
+      setFormData({...formData, scheduled_time: formatted})
+    } else {
+      setFormData({...formData, scheduled_time: '07:00 AM'})
+    }
+  }
+
   const handleBulkToggle = async (isActive) => {
     try {
       setBulkActioning(true)
@@ -200,13 +245,26 @@ export function ScheduledWidget() {
 
     try {
       setSubmitting(true)
+      
+      // Format 07:00 PM to 24h format for Postgres (HH:mm:ss)
+      let submitTime = "07:00:00"
+      if (formData.scheduled_time) {
+        let val = formData.scheduled_time.toLowerCase()
+        let isPM = val.includes('pm')
+        let [h, m] = val.replace(/[^0-9:]/g, '').split(':')
+        let hh = parseInt(h || 0, 10)
+        let mm = parseInt(m || 0, 10)
+        if (isPM && hh < 12) hh += 12
+        if (!isPM && hh === 12) hh = 0
+        submitTime = `${hh.toString().padStart(2,'0')}:${mm.toString().padStart(2,'0')}:00`
+      }
+
       const res = await fetch('/api/scheduled', {
         method: 'POST',
         headers: await getHeaders(true),
         body: JSON.stringify({
           ...formData,
-          // Đảm bảo HH:mm:ss
-          scheduled_time: formData.scheduled_time + ':00',
+          scheduled_time: submitTime,
           amount: Number(formData.amount.replace(/\D/g, '')),
           start_date: new Date().toISOString().split('T')[0]
         })
@@ -220,7 +278,7 @@ export function ScheduledWidget() {
           amount: '', 
           category_id: '', 
           frequency: 'daily', 
-          scheduled_time: '07:00',
+          scheduled_time: '07:00 AM',
           start_date: new Date().toISOString().split('T')[0],
           end_date: '',
           day_of_week: [1],
@@ -291,9 +349,11 @@ export function ScheduledWidget() {
                 <div>
                   <Label>Thời gian chạy</Label>
                   <Input 
-                    type="time" 
+                    type="text" 
+                    placeholder="VD: 7am, 19:30, 07:00 PM"
                     value={formData.scheduled_time}
                     onChange={e => setFormData({...formData, scheduled_time: e.target.value})}
+                    onBlur={handleTimeBlur}
                   />
                 </div>
               </div>
