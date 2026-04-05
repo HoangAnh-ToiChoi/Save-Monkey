@@ -1,0 +1,17 @@
+# TRẠNG THÁI HIỆN TẠI (MEMORY)
+- Dự án: Chi Tiêu Thông Minh
+- Tiến độ chung: Hệ thống Backend, DB, Autotask cơ bản đã test thành công. Chuẩn bị làm Frontend.
+- Trạng thái các tính năng P0:
+  - Auth: Chưa làm (Next Step)
+  - Onboarding 4 bước: Chưa làm
+  - Dashboard: Chưa làm
+  - Transactions: Chưa làm
+  - Budgets: Chưa làm
+  - Scheduled: Đã xong backend cron, chưa có UI
+- Hạ tầng đã setup:
+  - ✅ Supabase connection (client + server)
+  - ✅ Database schema (7 bảng + RLS + indexes) + đã fix `cron_logs` (nhớ reload schema cache trên Supabase)
+  - ✅ RPC Function `process_scheduled_expense` (đã fix param signature)
+  - ✅ API `/api/cron/process` (auto-deduct mỗi 30 phút, đã fix logic early return)
+  - ✅ `vercel.json` cấu hình cron schedule
+  - ✅ Giao diện test API nội bộ (`/test`) chạy tốt.

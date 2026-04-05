@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🧪 Chi Tiêu Thông Minh — Backend Test UI</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117;
+      --surface: #1a1d27;
+      --surface2: #242736;
+      --border: #2e3347;
+      --accent: #6366f1;
+      --accent2: #818cf8;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --blue: #3b82f6;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --font: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 13px;
+      min-height: 100vh;
+    }
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    header h1 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--accent2);
+      letter-spacing: 0.5px;
+    }
+    .badge {
+      background: var(--accent);
+      color: white;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--muted);
+      animation: none;
+    }
+    .status-dot.online { background: var(--green); animation: pulse 2s infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 280px 1fr;
+      height: calc(100vh - 53px);
+    }
+    /* ── Sidebar ── */
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      padding: 16px 0;
+    }
+    .sidebar-section {
+      padding: 6px 16px;
+      font-size: 10px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      font-weight: 700;
+      margin-top: 8px;
+    }
+    .test-btn {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      background: none;
+      border: none;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 12px;
+      padding: 9px 16px;
+      cursor: pointer;
+      transition: background 0.15s;
+      text-align: left;
+    }
+    .test-btn:hover { background: var(--surface2); }
+    .test-btn.active { background: var(--surface2); color: var(--accent2); border-right: 2px solid var(--accent); }
+    .test-btn .icon { font-size: 14px; width: 20px; text-align: center; }
+    .test-btn .label { flex: 1; }
+    .test-btn .result-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+      flex-shrink: 0;
+    }
+    .test-btn .result-dot.pass { background: var(--green); }
+    .test-btn .result-dot.fail { background: var(--red); }
+    .test-btn .result-dot.warn { background: var(--yellow); }
+    /* ── Main ── */
+    .main {
+      display: grid;
+      grid-template-rows: auto 1fr;
+      overflow: hidden;
+    }
+    .test-panel {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface2);
+    }
+    .test-panel h2 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent2);
+      margin-bottom: 4px;
+    }
+    .test-panel p {
+      color: var(--muted);
+      font-size: 11px;
+      margin-bottom: 14px;
+    }
+    .controls {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 7px 16px;
+      border-radius: 6px;
+      font-family: var(--font);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-weight: 600;
+    }
+    .btn:hover { background: var(--accent2); transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn.secondary {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn.danger { background: var(--red); }
+    .btn.success { background: var(--green); color: #000; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    /* Inputs */
+    .input-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .input-group label {
+      color: var(--muted);
+      font-size: 11px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .input-group input, .input-group select {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      outline: none;
+      min-width: 180px;
+    }
+    .input-group input:focus, .input-group select:focus {
+      border-color: var(--accent);
+    }
+    /* Log area */
+    .log-area {
+      overflow-y: auto;
+      padding: 16px 24px;
+    }
+    .log-entry {
+      display: flex;
+      gap: 10px;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+      animation: fadeIn 0.2s ease;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+    .log-time {
+      color: var(--muted);
+      font-size: 10px;
+      flex-shrink: 0;
+      padding-top: 2px;
+      min-width: 70px;
+    }
+    .log-msg {
+      flex: 1;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-all;
+      line-height: 1.6;
+    }
+    .log-msg.success { color: var(--green); }
+    .log-msg.error { color: var(--red); }
+    .log-msg.warn { color: var(--yellow); }
+    .log-msg.info { color: var(--blue); }
+    .log-msg.header { color: var(--accent2); font-weight: 700; font-size: 12px; }
+    .log-msg.json {
+      background: var(--surface2);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 4px;
+      border-left: 2px solid var(--accent);
+    }
+    /* Data table */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      margin-top: 8px;
+    }
+    .data-table th {
+      background: var(--surface);
+      color: var(--muted);
+      padding: 6px 10px;
+      text-align: left;
+      border: 1px solid var(--border);
+      font-weight: 700;
+      text-transform: uppercase;
+      font-size: 10px;
+      letter-spacing: 0.5px;
+    }
+    .data-table td {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+      max-width: 250px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      vertical-align: top;
+    }
+    .data-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+    .chip {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 10px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .chip.success { background: rgba(34,197,94,0.15); color: var(--green); }
+    .chip.error { background: rgba(239,68,68,0.15); color: var(--red); }
+    .chip.warn { background: rgba(245,158,11,0.15); color: var(--yellow); }
+    .chip.info { background: rgba(59,130,246,0.15); color: var(--blue); }
+    .empty-state {
+      text-align: center;
+      color: var(--muted);
+      padding: 40px;
+      font-size: 12px;
+    }
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 12px 0;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="status-dot" id="serverDot"></div>
+  <h1>🧪 Chi Tiêu Thông Minh — Backend Test UI</h1>
+  <span class="badge">DEV</span>
+  <span id="serverStatus" style="color: var(--muted); font-size: 11px; margin-left: auto;">Chưa kết nối</span>
+</header>
+
+<div class="layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-section">Kết nối</div>
+    <button class="test-btn active" onclick="showTest('supabase')" id="btn-supabase">
+      <span class="icon">🔌</span>
+      <span class="label">Supabase Connection</span>
+      <span class="result-dot" id="dot-supabase"></span>
+    </button>
+    <button class="test-btn" onclick="showTest('cron-api')" id="btn-cron-api">
+      <span class="icon">⚙️</span>
+      <span class="label">Cron API Endpoint</span>
+      <span class="result-dot" id="dot-cron-api"></span>
+    </button>
+
+    <div class="sidebar-section">Database</div>
+    <button class="test-btn" onclick="showTest('categories')" id="btn-categories">
+      <span class="icon">📂</span>
+      <span class="label">Categories</span>
+      <span class="result-dot" id="dot-categories"></span>
+    </button>
+    <button class="test-btn" onclick="showTest('scheduled')" id="btn-scheduled">
+      <span class="icon">🕐</span>
+      <span class="label">Scheduled Expenses</span>
+      <span class="result-dot" id="dot-scheduled"></span>
+    </button>
+    <button class="test-btn" onclick="showTest('transactions')" id="btn-transactions">
+      <span class="icon">💳</span>
+      <span class="label">Transactions</span>
+      <span class="result-dot" id="dot-transactions"></span>
+    </button>
+    <button class="test-btn" onclick="showTest('cron-logs')" id="btn-cron-logs">
+      <span class="icon">📋</span>
+      <span class="label">Cron Logs</span>
+      <span class="result-dot" id="dot-cron-logs"></span>
+    </button>
+
+    <div class="sidebar-section">RPC Functions</div>
+    <button class="test-btn" onclick="showTest('rpc')" id="btn-rpc">
+      <span class="icon">⚡</span>
+      <span class="label">process_scheduled_expense</span>
+      <span class="result-dot" id="dot-rpc"></span>
+    </button>
+
+    <div class="sidebar-section">Seed Data</div>
+    <button class="test-btn" onclick="showTest('seed')" id="btn-seed">
+      <span class="icon">🌱</span>
+      <span class="label">Insert Test Data</span>
+      <span class="result-dot" id="dot-seed"></span>
+    </button>
+
+    <div class="sidebar-section">Auth Test</div>
+    <button class="test-btn" onclick="showTest('auth')" id="btn-auth">
+      <span class="icon">🔐</span>
+      <span class="label">Auth (Đăng ký / Đăng nhập)</span>
+      <span class="result-dot" id="dot-auth"></span>
+    </button>
+  </aside>
+
+  <!-- Main content -->
+  <main class="main">
+    <!-- Test panels (only one visible at a time) -->
+    <div id="panel-supabase" class="test-panel">
+      <h2>🔌 Supabase Connection Test</h2>
+      <p>Kiểm tra kết nối đến Supabase Cloud và xác thực anon key / service role.</p>
+      <div class="controls">
+        <button class="btn" onclick="testSupabaseConnection()">▶ Chạy Test</button>
+        <button class="btn secondary" onclick="clearLog()">🗑 Xóa log</button>
+      </div>
+    </div>
+
+    <div id="panel-cron-api" class="test-panel" style="display:none">
+      <h2>⚙️ Cron API Endpoint Test</h2>
+      <p>Gọi <code>GET /api/cron/process</code> với Authorization header đúng / sai.</p>
+      <div class="controls">
+        <button class="btn" onclick="testCronAPI(true)">▶ Test với đúng secret</button>
+        <button class="btn danger" onclick="testCronAPI(false)">✗ Test với sai secret</button>
+        <button class="btn secondary" onclick="clearLog()">🗑 Xóa log</button>
+      </div>
+    </div>
+
+    <div id="panel-categories" class="test-panel" style="display:none">
+      <h2>📂 Categories Table</h2>
+      <p>Đọc bảng <code>categories</code> từ Supabase. Cần có user đăng nhập hoặc dùng service key.</p>
+      <div class="controls">
+        <button class="btn" onclick="viewTable('categories', ['id','user_id','name','icon','color','is_default','created_at'])">▶ Xem dữ liệu</button>
+        <button class="btn secondary" onclick="clearLog()">🗑 Xóa log</button>
+      </div>
+    </div>
+
+    <div id="panel-scheduled" class="test-panel" style="display:none">
+      <h2>🕐 Scheduled Expenses Table</h2>
+      <p>Đọc bảng <code>scheduled_expenses</code> từ Supabase (service key — bypass RLS).</p>
+      <div class="controls">
+        <button class="btn" onclick="viewTable('scheduled_expenses', ['id','user_id','name','amount','frequency','scheduled_time','is_active','last_run_date'])">▶ Xem dữ liệu</button>
+        <button class="btn secondary" onclick="clearLog()">🗑 Xóa log</button>
+      </div>
+    </div>
+
+    <div id="panel-transactions" class="test-panel" style="display:none">
+      <h2>💳 Transactions Table</h2>
+      <p>Đọc 20 transactions mới nhất từ Supabase.</p>
+      <div class="controls">
+        <button class="btn" onclick="viewTable('transactions', ['id','user_id','type','amount','source','note','transaction_date','created_at'], 'transaction_date', false, 20)">▶ Xem dữ liệu</button>
+        <button class="btn secondary" onclick="clearLog()">🗑 Xóa log</button>
+      </div>
+    </div>
+
+    <div id="panel-cron-logs" class="test-panel" style="display:none">
+      <h2>📋 Cron Logs</h2>
+      <p>Xem 50 log gần nhất từ bảng <code>cron_logs</code>.</p>
+      <div class="controls">
+        <button class="btn" onclick="viewCronLogs()">▶ Tải Cron Logs</button>
+        <button class="btn secondary" onclick="clearLog()">🗑 Xóa log</button>
+      </div>
+    </div>
+
+    <div id="panel-rpc" class="test-panel" style="display:none">
+      <h2>⚡ RPC: process_scheduled_expense</h2>
+      <p>Test RPC function trực tiếp. Nhập Scheduled Expense ID để chạy.</p>
+      <div class="input-group" style="margin-bottom: 10px;">
+        <label>Scheduled Expense ID (UUID)
+          <input type="text" id="rpc-id" placeholder="paste UUID ở đây..." style="min-width: 320px;" />
+        </label>
+      </div>
+      <div class="controls">
+        <button class="btn" onclick="testRPC()">⚡ Gọi RPC</button>
+        <button class="btn secondary" onclick="loadScheduledForRPC()">📋 Load danh sách IDs</button>
+        <button class="btn secondary" onclick="clearLog()">🗑 Xóa log</button>
+      </div>
+    </div>
+
+    <div id="panel-seed" class="test-panel" style="display:none">
+      <h2>🌱 Insert Test Data</h2>
+      <p>Tạo một <code>scheduled_expense</code> test để dùng cho các test khác. Cần User ID.</p>
+      <div class="input-group">
+        <label>User ID (UUID)
+          <input type="text" id="seed-userid" placeholder="paste user UUID..." style="min-width: 300px;" />
+        </label>
+        <label>Category ID (UUID, có thể để trống)
+          <input type="text" id="seed-catid" placeholder="optional..." style="min-width: 250px;" />
+        </label>
+      </div>
+      <div class="controls">
+        <button class="btn success" onclick="seedScheduledExpense()">🌱 Tạo Test Scheduled Expense</button>
+        <button class="btn secondary" onclick="clearLog()">🗑 Xóa log</button>
+      </div>
+    </div>
+
+    <div id="panel-auth" class="test-panel" style="display:none">
+      <h2>🔐 Auth Test — Đăng ký / Đăng nhập</h2>
+      <p>Test Supabase Auth. <strong>Lưu ý:</strong> Email phải thật (Supabase gửi xác nhận).</p>
+      <div class="input-group">
+        <label>Email
+          <input type="email" id="auth-email" placeholder="test@example.com" />
+        </label>
+        <label>Password
+          <input type="password" id="auth-password" placeholder="min 6 ký tự" />
+        </label>
+      </div>
+      <div class="controls">
+        <button class="btn" onclick="testSignUp()">📝 Đăng ký</button>
+        <button class="btn success" onclick="testSignIn()">🔑 Đăng nhập</button>
+        <button class="btn danger" onclick="testSignOut()">🚪 Đăng xuất</button>
+        <button class="btn secondary" onclick="getSession()">👤 Xem Session</button>
+        <button class="btn secondary" onclick="clearLog()">🗑 Xóa log</button>
+      </div>
+    </div>
+
+    <!-- Log output -->
+    <div class="log-area" id="logArea"></div>
+  </main>
+</div>
+
+<script>
+  // ─────────────────────────────────────
+  // CẤU HÌNH
+  // ─────────────────────────────────────
+  const SUPABASE_URL = 'https://shhtnvlbthtbrihtqljw.supabase.co'
+  const SUPABASE_ANON_KEY = 'sb_publishable_4KJ-L4RvFlCzv5hL7ONijQ_8Y02zEIH'
+  const CRON_SECRET = 'savemonkey-cron-secret-2026'
+  const API_BASE = 'http://localhost:3000'
+
+  // Khởi tạo Supabase client (anon key — có RLS)
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+  // ─────────────────────────────────────
+  // LOG HELPERS
+  // ─────────────────────────────────────
+  const logArea = document.getElementById('logArea')
+
+  function log(msg, type = '', showTime = true) {
+    const entry = document.createElement('div')
+    entry.className = 'log-entry'
+
+    const time = showTime
+      ? `<span class="log-time">${new Date().toLocaleTimeString('vi-VN')}</span>`
+      : `<span class="log-time"></span>`
+
+    entry.innerHTML = `${time}<span class="log-msg ${type}">${escHtml(typeof msg === 'string' ? msg : '')}</span>`
+    logArea.appendChild(entry)
+    logArea.scrollTop = logArea.scrollHeight
+    return entry
+  }
+
+  function logJson(obj, label = '') {
+    const entry = document.createElement('div')
+    entry.className = 'log-entry'
+    const time = `<span class="log-time">${new Date().toLocaleTimeString('vi-VN')}</span>`
+    const pretty = JSON.stringify(obj, null, 2)
+    entry.innerHTML = `${time}<div class="log-msg"><div style="color:var(--muted);font-size:10px;margin-bottom:4px;">${escHtml(label)}</div><div class="json">${escHtml(pretty)}</div></div>`
+    logArea.appendChild(entry)
+    logArea.scrollTop = logArea.scrollHeight
+  }
+
+  function logTable(data, cols) {
+    if (!data || data.length === 0) {
+      log('⚠️ Không có dữ liệu (0 rows)', 'warn')
+      return
+    }
+    const entry = document.createElement('div')
+    entry.className = 'log-entry'
+    entry.style.flexDirection = 'column'
+    entry.style.gap = '8px'
+
+    const time = `<span class="log-time">${new Date().toLocaleTimeString('vi-VN')}</span>`
+    const headers = cols.map(c => `<th>${c}</th>`).join('')
+    const rows = data.map(row => {
+      const cells = cols.map(c => {
+        let val = row[c]
+        if (val === null || val === undefined) val = '<span style="color:var(--muted)">null</span>'
+        else if (typeof val === 'boolean') val = val ? '✅' : '❌'
+        else if (typeof val === 'object') val = JSON.stringify(val).substring(0, 60)
+        else val = escHtml(String(val)).substring(0, 80)
+        return `<td title="${String(row[c] ?? '')}">${val}</td>`
+      }).join('')
+      return `<tr>${cells}</tr>`
+    }).join('')
+
+    entry.innerHTML = `
+      <div style="display:flex;align-items:center;gap:8px;">${time}
+        <span style="color:var(--green);font-size:11px;font-weight:700;">${data.length} rows</span>
+      </div>
+      <div style="overflow-x:auto;padding-left:4px;">
+        <table class="data-table">
+          <thead><tr>${headers}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `
+    logArea.appendChild(entry)
+    logArea.scrollTop = logArea.scrollHeight
+  }
+
+  function clearLog() {
+    logArea.innerHTML = ''
+  }
+
+  function setDot(id, status) {
+    const dot = document.getElementById(`dot-${id}`)
+    if (dot) {
+      dot.className = 'result-dot ' + (status === 'pass' ? 'pass' : status === 'fail' ? 'fail' : 'warn')
+    }
+  }
+
+  function escHtml(str) {
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+  }
+
+  // ─────────────────────────────────────
+  // PANEL SWITCHING
+  // ─────────────────────────────────────
+  const panels = ['supabase','cron-api','categories','scheduled','transactions','cron-logs','rpc','seed','auth']
+
+  function showTest(id) {
+    panels.forEach(p => {
+      document.getElementById(`panel-${p}`).style.display = 'none'
+      document.getElementById(`btn-${p}`).classList.remove('active')
+    })
+    document.getElementById(`panel-${id}`).style.display = ''
+    document.getElementById(`btn-${id}`).classList.add('active')
+  }
+
+  // ─────────────────────────────────────
+  // TEST 1: Supabase Connection
+  // ─────────────────────────────────────
+  async function testSupabaseConnection() {
+    clearLog()
+    log('═══════════════════════════════════════', 'header')
+    log('   🔌 SUPABASE CONNECTION TEST', 'header')
+    log('═══════════════════════════════════════', 'header')
+    log(`URL: ${SUPABASE_URL}`, 'info')
+    log(`Anon Key: ${SUPABASE_ANON_KEY.substring(0, 20)}...`, 'info')
+
+    try {
+      log('\n🔄 Đang ping Supabase...', 'info')
+      const start = Date.now()
+
+      // Test 1: Query bảng categories (public) — nếu RLS chặn sẽ ra 0 rows, không lỗi
+      const { data, error, status } = await supabase
+        .from('categories')
+        .select('count', { count: 'exact', head: true })
+
+      const ms = Date.now() - start
+
+      if (error && error.code !== 'PGRST116') {
+        log(`❌ Lỗi: ${error.message} (code: ${error.code})`, 'error')
+        setDot('supabase', 'fail')
+      } else {
+        log(`✅ Kết nối thành công! Ping: ${ms}ms (HTTP ${status})`, 'success')
+        setDot('supabase', 'pass')
+
+        // Cập nhật header
+        document.getElementById('serverDot').classList.add('online')
+        document.getElementById('serverStatus').textContent = `Supabase: Online (${ms}ms)`
+        document.getElementById('serverStatus').style.color = 'var(--green)'
+      }
+
+      // Test 2: Auth status
+      log('\n🔄 Kiểm tra auth session...', 'info')
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        log(`✅ Đã đăng nhập: ${session.user.email}`, 'success')
+        log(`   User ID: ${session.user.id}`, 'info')
+        log(`   Token expires: ${new Date(session.expires_at * 1000).toLocaleString('vi-VN')}`, 'info')
+      } else {
+        log('⚠️  Chưa đăng nhập (anonymous session)', 'warn')
+        log('   → Một số test cần đăng nhập để thấy data (RLS)', 'warn')
+      }
+
+      // Test 3: List tables có public access
+      log('\n🔄 Test query bảng cron_logs (service operation)...', 'info')
+      const { data: logs, error: logsErr } = await supabase
+        .from('cron_logs')
+        .select('id, status, created_at')
+        .limit(1)
+
+      if (logsErr) {
+        log(`⚠️  cron_logs: ${logsErr.message}`, 'warn')
+      } else {
+        log(`✅ cron_logs accessible — ${logs?.length ?? 0} row preview`, 'success')
+      }
+
+    } catch (e) {
+      log(`💥 Exception: ${e.message}`, 'error')
+      setDot('supabase', 'fail')
+    }
+
+    log('\n✅ Connection test hoàn tất!', 'success')
+  }
+
+  // ─────────────────────────────────────
+  // TEST 2: Cron API
+  // ─────────────────────────────────────
+  async function testCronAPI(useCorrectSecret) {
+    clearLog()
+    log('═══════════════════════════════════════', 'header')
+    log(`   ⚙️  CRON API TEST — ${useCorrectSecret ? 'ĐÚNG SECRET' : 'SAI SECRET'}`, 'header')
+    log('═══════════════════════════════════════', 'header')
+
+    const secret = useCorrectSecret ? CRON_SECRET : 'wrong-secret-123'
+    const url = `${API_BASE}/api/cron/process`
+
+    log(`\n🔄 Gọi GET ${url}`, 'info')
+    log(`   Authorization: Bearer ${secret}`, 'info')
+
+    const start = Date.now()
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${secret}` }
+      })
+      const ms = Date.now() - start
+      const json = await res.json()
+
+      log(`\n📡 Response: HTTP ${res.status} (${ms}ms)`, res.ok ? 'success' : 'error')
+
+      if (res.status === 401) {
+        log('✅ Auth check PASS — Server từ chối đúng khi sai secret', 'success')
+        setDot('cron-api', useCorrectSecret ? 'fail' : 'pass')
+      } else if (res.ok && json.success) {
+        log(`✅ Cron API hoạt động tốt!`, 'success')
+        log(`   Processed: ${json.processed} | Skipped: ${json.skipped} | Total: ${json.total}`, 'success')
+        log(`   Window: ${json.window?.start} → ${json.window?.end}`, 'info')
+        log(`   Date: ${json.date}`, 'info')
+        setDot('cron-api', 'pass')
+      }
+
+      if (json.results && json.results.length > 0) {
+        log('\n📊 Chi tiết results:', 'info')
+        logTable(json.results, ['id','name','amount','status','reason','error'])
+      }
+
+      logJson(json, 'Full response:')
+
+    } catch (e) {
+      log(`💥 Fetch error: ${e.message}`, 'error')
+      log('⚠️  Kiểm tra dev server có đang chạy không (localhost:3000)', 'warn')
+      setDot('cron-api', 'fail')
+    }
+  }
+
+  // ─────────────────────────────────────
+  // TEST: View Table
+  // ─────────────────────────────────────
+  async function viewTable(table, cols, orderBy = 'created_at', ascending = false, limit = 50) {
+    clearLog()
+    log('═══════════════════════════════════════', 'header')
+    log(`   📊 TABLE: ${table.toUpperCase()}`, 'header')
+    log('═══════════════════════════════════════', 'header')
+    log(`🔄 Đọc ${limit} rows từ ${table}...`, 'info')
+
+    try {
+      let q = supabase.from(table).select('*').order(orderBy, { ascending }).limit(limit)
+      const { data, error, count } = await q
+
+      if (error) {
+        log(`❌ Lỗi: ${error.message}`, 'error')
+        log(`   Code: ${error.code}`, 'error')
+        if (error.code === 'PGRST301' || error.message.includes('RLS')) {
+          log('⚠️  RLS đang chặn — cần đăng nhập để xem data của user', 'warn')
+        }
+        setDot(table === 'scheduled_expenses' ? 'scheduled' : table === 'cron_logs' ? 'cron-logs' : table, 'fail')
+        return
+      }
+
+      log(`✅ Thành công — ${data?.length ?? 0} rows`, 'success')
+      logTable(data, cols)
+
+      const dotId = table === 'scheduled_expenses' ? 'scheduled' : table === 'cron_logs' ? 'cron-logs' : table
+      setDot(dotId, data?.length > 0 ? 'pass' : 'warn')
+
+    } catch (e) {
+      log(`💥 Exception: ${e.message}`, 'error')
+    }
+  }
+
+  // ─────────────────────────────────────
+  // TEST: Cron Logs (special UI)
+  // ─────────────────────────────────────
+  async function viewCronLogs() {
+    clearLog()
+    log('═══════════════════════════════════════', 'header')
+    log('   📋 CRON LOGS VIEWER', 'header')
+    log('═══════════════════════════════════════', 'header')
+    log('🔄 Tải 50 cron logs mới nhất...', 'info')
+
+    try {
+      const { data, error } = await supabase
+        .from('cron_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(50)
+
+      if (error) {
+        log(`❌ Lỗi: ${error.message}`, 'error')
+        if (error.code === 'PGRST301') {
+          log('⚠️  RLS chặn — cron_logs cần đăng nhập hoặc không có RLS policy', 'warn')
+          log('💡 Tip: Bảng cron_logs chưa có RLS policy — cần thêm vào schema', 'warn')
+        }
+        setDot('cron-logs', 'fail')
+        return
+      }
+
+      if (!data || data.length === 0) {
+        log('⚠️  Bảng cron_logs trống — chưa có log nào', 'warn')
+        log('💡 Tip: Chạy Cron API test để tạo logs', 'info')
+        setDot('cron-logs', 'warn')
+        return
+      }
+
+      // Summary
+      const success = data.filter(r => r.status === 'success').length
+      const skipped = data.filter(r => r.status === 'skipped').length
+      const failed = data.filter(r => r.status === 'failed').length
+      log(`✅ ${data.length} logs — ✅ ${success} success | ⏭ ${skipped} skipped | ❌ ${failed} failed`, 'success')
+
+      // Enhanced table
+      const entry = document.createElement('div')
+      entry.className = 'log-entry'
+      entry.style.flexDirection = 'column'
+      entry.style.gap = '8px'
+
+      const rows = data.map(row => {
+        const statusChip = {
+          success: '<span class="chip success">✅ success</span>',
+          skipped: '<span class="chip warn">⏭ skipped</span>',
+          failed: '<span class="chip error">❌ failed</span>',
+        }[row.status] || row.status
+
+        const time = new Date(row.created_at).toLocaleString('vi-VN')
+        const expId = row.scheduled_expense_id ? row.scheduled_expense_id.substring(0, 8) + '...' : '<span style="color:var(--muted)">null</span>'
+
+        return `<tr>
+          <td title="${row.id}">${row.id.substring(0, 8)}...</td>
+          <td title="${row.scheduled_expense_id || ''}">${expId}</td>
+          <td>${statusChip}</td>
+          <td title="${row.message || ''}">${escHtml((row.message || '').substring(0, 50))}</td>
+          <td>${time}</td>
+        </tr>`
+      }).join('')
+
+      entry.innerHTML = `
+        <div style="overflow-x:auto;">
+          <table class="data-table">
+            <thead><tr><th>Log ID</th><th>Expense ID</th><th>Status</th><th>Message</th><th>Created At</th></tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `
+      logArea.appendChild(entry)
+      logArea.scrollTop = logArea.scrollHeight
+      setDot('cron-logs', failed > 0 ? 'warn' : 'pass')
+
+    } catch (e) {
+      log(`💥 Exception: ${e.message}`, 'error')
+    }
+  }
+
+  // ─────────────────────────────────────
+  // TEST: RPC Function
+  // ─────────────────────────────────────
+  async function loadScheduledForRPC() {
+    clearLog()
+    log('🔄 Tải danh sách scheduled expenses IDs...', 'info')
+    const { data, error } = await supabase
+      .from('scheduled_expenses')
+      .select('id, name, amount, frequency, is_active')
+      .limit(10)
+
+    if (error) {
+      log(`❌ ${error.message}`, 'error')
+      return
+    }
+    if (!data || data.length === 0) {
+      log('⚠️  Không có scheduled expense nào — hãy dùng tab "Seed Data" để tạo', 'warn')
+      return
+    }
+
+    log(`✅ Tìm thấy ${data.length} scheduled expenses:`, 'success')
+    logTable(data, ['id','name','amount','frequency','is_active'])
+    log('\n💡 Copy ID ở trên và paste vào ô "Scheduled Expense ID" bên trên rồi bấm "Gọi RPC"', 'info')
+    if (data[0]) {
+      document.getElementById('rpc-id').value = data[0].id
+      log(`✅ Auto-fill ID đầu tiên: ${data[0].id}`, 'success')
+    }
+  }
+
+  async function testRPC() {
+    const id = document.getElementById('rpc-id').value.trim()
+    if (!id) {
+      log('⚠️  Nhập Scheduled Expense ID trước!', 'warn')
+      return
+    }
+    clearLog()
+    log('═══════════════════════════════════════', 'header')
+    log('   ⚡ RPC: process_scheduled_expense', 'header')
+    log('═══════════════════════════════════════', 'header')
+    log(`\n🔄 Gọi RPC với p_id = ${id}`, 'info')
+
+    try {
+      const start = Date.now()
+      const { data, error } = await supabase.rpc('process_scheduled_expense', { p_id: id })
+      const ms = Date.now() - start
+
+      if (error) {
+        log(`\n❌ RPC Error (${ms}ms): ${error.message}`, 'error')
+        log(`   Code: ${error.code}`, 'error')
+        log(`   Details: ${JSON.stringify(error.details)}`, 'error')
+
+        // Phân tích lỗi cụ thể
+        if (error.message.includes('could not find the function')) {
+          log('\n🐛 BUG DETECTED: Function signature không khớp!', 'error')
+          log('   SQL function dự kiến param: p_id UUID', 'warn')
+          log('   → Kiểm tra lại schema.sql mục 10', 'warn')
+        }
+        setDot('rpc', 'fail')
+        logJson(error, 'Full error:')
+        return
+      }
+
+      log(`\n📡 Kết quả RPC (${ms}ms):`, 'info')
+
+      if (data === true) {
+        log('✅ Thành công! Transaction mới đã được tạo.', 'success')
+        log('   → Kiểm tra tab Transactions để xem', 'info')
+        setDot('rpc', 'pass')
+      } else if (data === false) {
+        log('⏭️  Skipped — Đã xử lý hôm nay rồi (ON CONFLICT DO NOTHING)', 'warn')
+        log('   → Đây là behavior đúng, không phải lỗi!', 'warn')
+        setDot('rpc', 'warn')
+      } else {
+        log(`📊 Return value: ${JSON.stringify(data)}`, 'info')
+        setDot('rpc', 'pass')
+      }
+
+      // Auto-view cron log sau khi chạy
+      log('\n🔄 Kiểm tra cron_logs mới nhất...', 'info')
+      const { data: logs } = await supabase
+        .from('cron_logs')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(3)
+
+      if (logs && logs.length > 0) {
+        log('📋 3 log gần nhất:', 'info')
+        logTable(logs, ['id','scheduled_expense_id','status','message','created_at'])
+      }
+
+    } catch (e) {
+      log(`💥 Exception: ${e.message}`, 'error')
+      setDot('rpc', 'fail')
+    }
+  }
+
+  // ─────────────────────────────────────
+  // SEED DATA
+  // ─────────────────────────────────────
+  async function seedScheduledExpense() {
+    const userId = document.getElementById('seed-userid').value.trim()
+    const catId = document.getElementById('seed-catid').value.trim() || null
+
+    if (!userId) {
+      log('⚠️  Nhập User ID trước! (Xem User ID ở tab Auth sau khi đăng nhập)', 'warn')
+      return
+    }
+
+    clearLog()
+    log('═══════════════════════════════════════', 'header')
+    log('   🌱 SEED: Tạo Scheduled Expense Test', 'header')
+    log('═══════════════════════════════════════', 'header')
+
+    const seed = {
+      user_id: userId,
+      category_id: catId,
+      name: 'Test Chi Phí Tự Động',
+      amount: 50000,
+      frequency: 'daily',
+      scheduled_time: '00:05:00',  // chạy lúc 00:05
+      start_date: new Date().toISOString().split('T')[0],
+      is_active: true,
+    }
+
+    log('🔄 Inserting...', 'info')
+    logJson(seed, 'Data:')
+
+    const { data, error } = await supabase
+      .from('scheduled_expenses')
+      .insert(seed)
+      .select()
+      .single()
+
+    if (error) {
+      log(`❌ Lỗi: ${error.message}`, 'error')
+      if (error.message.includes('RLS') || error.code === '42501') {
+        log('⚠️  RLS Policy chặn Insert — Cần đăng nhập với user tương ứng', 'warn')
+      }
+      setDot('seed', 'fail')
+      logJson(error, 'Error detail:')
+      return
+    }
+
+    log(`\n✅ Tạo thành công!`, 'success')
+    logJson(data, 'Created scheduled expense:')
+    log(`\n💡 Copy ID này vào tab RPC để test: ${data.id}`, 'info')
+    document.getElementById('rpc-id').value = data.id
+    setDot('seed', 'pass')
+  }
+
+  // ─────────────────────────────────────
+  // AUTH TESTS
+  // ─────────────────────────────────────
+  async function testSignUp() {
+    const email = document.getElementById('auth-email').value
+    const password = document.getElementById('auth-password').value
+    clearLog()
+    log('═══════════════════════════════════════', 'header')
+    log('   📝 AUTH: Đăng ký tài khoản', 'header')
+    log('═══════════════════════════════════════', 'header')
+    log(`Email: ${email}`, 'info')
+    log('🔄 Đang đăng ký...', 'info')
+
+    const { data, error } = await supabase.auth.signUp({ email, password })
+    if (error) {
+      log(`❌ Lỗi: ${error.message}`, 'error')
+      setDot('auth', 'fail')
+      return
+    }
+    log('✅ Đăng ký thành công! Kiểm tra email để xác nhận.', 'success')
+    if (data.user) {
+      log(`   User ID: ${data.user.id}`, 'info')
+      log(`   Email: ${data.user.email}`, 'info')
+      document.getElementById('seed-userid').value = data.user.id
+    }
+    if (data.session) {
+      log('✅ Đăng nhập tự động thành công!', 'success')
+    }
+    logJson(data, 'Response:')
+    setDot('auth', 'pass')
+  }
+
+  async function testSignIn() {
+    const email = document.getElementById('auth-email').value
+    const password = document.getElementById('auth-password').value
+    clearLog()
+    log('═══════════════════════════════════════', 'header')
+    log('   🔑 AUTH: Đăng nhập', 'header')
+    log('═══════════════════════════════════════', 'header')
+    log(`Email: ${email}`, 'info')
+    log('🔄 Đang đăng nhập...', 'info')
+
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+    if (error) {
+      log(`❌ Lỗi: ${error.message}`, 'error')
+      setDot('auth', 'fail')
+      return
+    }
+    log(`✅ Đăng nhập thành công!`, 'success')
+    log(`   User ID: ${data.user.id}`, 'success')
+    log(`   Email: ${data.user.email}`, 'info')
+    log(`   Token: ${data.session.access_token.substring(0, 30)}...`, 'info')
+    document.getElementById('seed-userid').value = data.user.id
+    document.getElementById('serverStatus').textContent = `Logged in: ${data.user.email}`
+    document.getElementById('serverStatus').style.color = 'var(--green)'
+    setDot('auth', 'pass')
+  }
+
+  async function testSignOut() {
+    const { error } = await supabase.auth.signOut()
+    clearLog()
+    if (error) { log(`❌ ${error.message}`, 'error'); return }
+    log('✅ Đã đăng xuất thành công', 'success')
+    document.getElementById('serverStatus').textContent = 'Chưa đăng nhập'
+    document.getElementById('serverStatus').style.color = 'var(--muted)'
+  }
+
+  async function getSession() {
+    clearLog()
+    log('🔄 Kiểm tra session hiện tại...', 'info')
+    const { data: { session } } = await supabase.auth.getSession()
+    if (!session) {
+      log('⚠️  Không có session — chưa đăng nhập', 'warn')
+      return
+    }
+    log(`✅ Session active!`, 'success')
+    log(`   User ID: ${session.user.id}`, 'info')
+    log(`   Email: ${session.user.email}`, 'info')
+    log(`   Expires: ${new Date(session.expires_at * 1000).toLocaleString('vi-VN')}`, 'info')
+    document.getElementById('seed-userid').value = session.user.id
+    logJson(session.user, 'User object:')
+  }
+
+  // ─────────────────────────────────────
+  // INIT
+  // ─────────────────────────────────────
+  window.addEventListener('load', async () => {
+    // Ping server status
+    try {
+      const r = await fetch(`${API_BASE}/api/cron/process`, {
+        method: 'HEAD',
+        headers: { Authorization: `Bearer wrong` }
+      })
+      if (r.status === 401 || r.ok) {
+        document.getElementById('serverDot').classList.add('online')
+        document.getElementById('serverStatus').textContent = '✅ Next.js: Running'
+        document.getElementById('serverStatus').style.color = 'var(--green)'
+      }
+    } catch {
+      document.getElementById('serverStatus').textContent = '❌ Next.js: Offline (chạy npm run dev)'
+      document.getElementById('serverStatus').style.color = 'var(--red)'
+    }
+
+    log('═══════════════════════════════════════', 'header')
+    log('   🧪 CHI TIÊU THÔNG MINH — TEST UI', 'header')
+    log('═══════════════════════════════════════', 'header')
+    log('\nSẵn sàng test! Chọn một test từ sidebar bên trái.', 'success')
+    log('\n📋 Thứ tự test khuyến nghị:', 'info')
+    log('   1. Supabase Connection — kiểm tra kết nối DB', 'info')
+    log('   2. Auth — đăng nhập để lấy session', 'info')
+    log('   3. Categories / Scheduled / Transactions — xem data', 'info')
+    log('   4. Cron API — test endpoint /api/cron/process', 'info')
+    log('   5. RPC — test function process_scheduled_expense', 'info')
+    log('   6. Cron Logs — xem kết quả chạy', 'info')
+  })
+</script>
+</body>
+</html>
